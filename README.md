@@ -1,2 +1,2 @@
 # inodes
-pythong scripts to find inode hogs
+python scripts to find inode hogs
