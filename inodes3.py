@@ -21,8 +21,8 @@ If any directory including its subdirectories contain 10%(default) or more, they
 
 parser = ArgumentParser(description=usage)
 parser.add_argument("-p", "--path", dest='target', default=getcwd(), help='Path to start the search') #using dest='path' would conflict with the os.path import, d'oh.
-parser.add_argument("-s", "--single", dest='single', default='5', help="Report any single diretory holding more than this, default is 5%%, %%optional")
-parser.add_argument("-a", "--amassed", dest='amassed', default='10', help="Report any directory when including it's subdirectories is holding more than this, default is 10%%, %%optional")
+parser.add_argument("-s", "--single", dest='single', default='5', help="Report any single directory holding more than this, default is 5%%, %%optional")
+parser.add_argument("-a", "--amassed", dest='amassed', default='10', help="Report any directory when including its subdirectories is holding more than this, default is 10%%, %%optional")
 
 target = parser.parse_args().target
 single = float(parser.parse_args().single.strip('%'))
@@ -31,14 +31,14 @@ amassed = float(parser.parse_args().amassed.strip('%'))
 if single < 0.5:
     exit("Refusing to accept less than 0.5% for single argument")
 elif single >= 99.999:
-    exit("Lower the single argument vaule")
+    exit("Lower the single argument value")
 else:
     single=single/100
 
 if amassed < 1.0:
     exit("Refusing to accept less than 1.0% for amassed argument")
 elif amassed >= 99.999:
-    exit("Lower the amassed argument vaule")
+    exit("Lower the amassed argument value")
 else:
     amassed=amassed/100
 
@@ -66,7 +66,7 @@ for f in listdir(target):
 
 
 #This loop treats 'directories' as a stack containing a list of directories that have yet
-#to be scaned for inode count.  The for loop counts inodes for the currently investigated
+#to be scanned for inode count.  The for loop counts inodes for the currently investigated
 #directory.  table at the end of this loop contains the unique id for the directory,
 #the id of its parent, path of directory, and inode count for that
 #directory(not including suddirs yet)
@@ -110,9 +110,9 @@ if count==0:
 table = sorted(table, key=itemgetter(1))
 parent_dir_id = table[len(table)-1][1]
 
-#Now taking that table utilising the directory ids to sum up inodes of suddirs to parent
+#Now taking that table utilizing the directory ids to sum up inodes of suddirs to parent
 #inodes.  When the number of inodes exceed some limit store that path for display later.
-#Continue on until table is completly processed.
+#Continue on until table is completely processed.
 #Note: I reused the directories list to store final output.  It was empty after above loop.
 
 #The order of table doesn't change in the following loop. Using this static list is about
@@ -122,14 +122,14 @@ for x in table:
     static_list.append(x[0])
 
 
-#Copying the initial self contained inodes count to a second column.
+#Copying the initial self-contained inodes count to a second column.
 #Going to decrement table[3] when reporting inodes by the amount reported.
 #table[3] is also used for the reporting limit.
 #This significantly reduces the amount of directories reported
 for i in range(len(table)):
     table[i].append(table[i][3])
 
-limit = account_total*amassed #report direcories that contain more the 10% of total.
+limit = account_total*amassed #report directories that contain more the 10% of total.
 print(f"\n---Locating directories holding more than {amassed*100:.2f}% of total inodes----")
 while (len(table) > 0):
     inspect = table.pop()
