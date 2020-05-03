@@ -51,7 +51,7 @@ for f in listdir(target):
 
 
 #This loop treats 'directories' as a stack containing a list of directories that have yet
-#to be scaned for inode count.  The for loop counts inodes for the currently investigated
+#to be scanned for inode count.  The for loop counts inodes for the currently investigated
 #directory.  table at the end of this loop contains the unique id for the directory,
 #the id of its parent, path of directory, and inode count for that
 #directory(not including suddirs yet)
@@ -94,9 +94,9 @@ if count==0:
 table = sorted(table, key=itemgetter(1))
 parent_dir_id = table[len(table)-1][1]
 
-#Now taking that table utilising the directory ids to sum up inodes of suddirs to parent
+#Now taking that table utilizing the directory ids to sum up inodes of suddirs to parent
 #inodes.  When the number of inodes exceed some limit store that path for display later.
-#Continue on until table is completly processed.
+#Continue on until table is completely processed.
 #Note: I reused the directories list to store final output.  It was empty after above loop.
 
 #The order of table doesn't change in the following loop. Using this static list is about
@@ -106,14 +106,14 @@ for x in table:
     static_list.append(x[0])
 
 
-#Copying the initial self contained inodes count to a second column.
+#Copying the initial self-contained inodes count to a second column.
 #Going to decrement table[3] when reporting inodes by the amount reported.
 #table[3] is also used for the reporting limit.
 #This significantly reduces the amount of directories reported
 for i in range(len(table)):
     table[i].append(table[i][3])
 
-limit = account_total/10 #report direcories that contain more the 10% of total.
+limit = account_total/10 #report directories that contain more the 10% of total.
 print "\n---Locating directories holding more than 10% of total inodes----"
 while (len(table) > 0):
     inspect = table.pop()
