@@ -1,33 +1,62 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 
-import os, sys, operator
-from stat import *
-
-if (len(sys.argv) > 2):
-    print("Inode Counter -- use this to find subfolders using excessive inodes.")
-    print("If directory contains 5% or more of user's inodes, it will be shown.")
-    print("If subdirectories contain 10% or more, they will be shown.")
-    print("Usage: inodes.py <directory>")
-    sys.exit(1)
+from stat import S_ISDIR,ST_MODE,S_ISREG
+from os import getcwd,listdir,lstat,path
+from sys import argv,exit
+from operator import itemgetter
+from argparse import ArgumentParser
 
 directories = []
 table = []
 tl = []
 current_dir_id = 1
 parent_dir_id = 0
-#limit = int(sys.argv[2])
 total=0
 account_total=0
 
 
-#indentify directories at given level.
-path=os.getcwd()
-if (len(sys.argv) == 2):
-    path=sys.argv[1]
+usage = """Inode counter -- use this to find subfolders using excessive inodes.
+If any single directory contains 5%(default) or more of total calculated inodes, it will be shown.
+If any directory including its subdirectories contain 10%(default) or more, they will be shown."""
 
-for f in os.listdir(path):
-    pathname = os.path.join(path, f)
-    mode = os.lstat(pathname)[ST_MODE]
+parser = ArgumentParser(description=usage)
+parser.add_argument("-p", "--path", dest='target', default=getcwd(), help='Path to start the search') #using dest='path' would conflict with the os.path import, d'oh.
+parser.add_argument("-s", "--single", dest='single', default='5', help="Report any single diretory holding more than this, default is 5%%, %%optional")
+parser.add_argument("-a", "--amassed", dest='amassed', default='10', help="Report any directory when including it's subdirectories is holding more than this, default is 10%%, %%optional")
+
+target = parser.parse_args().target
+single = float(parser.parse_args().single.strip('%'))
+amassed = float(parser.parse_args().amassed.strip('%'))
+
+if single < 0.5:
+    exit("Refusing to accept less than 0.5% for single argument")
+elif single >= 99.999:
+    exit("Lower the single argument vaule")
+else:
+    single=single/100
+
+if amassed < 1.0:
+    exit("Refusing to accept less than 1.0% for amassed argument")
+elif amassed >= 99.999:
+    exit("Lower the amassed argument vaule")
+else:
+    amassed=amassed/100
+
+
+if path.isfile(target):
+    print(f"{target} is a file not a directory")
+    exit(2)
+
+try: 
+    listdir(target)
+except OSError:
+    print(f"Could not open {target}")
+    exit(2)
+    
+for f in listdir(target):
+    pathname = path.join(target, f)
+    mode = lstat(pathname)[ST_MODE]
+
     if S_ISDIR(mode):
         directories.append([current_dir_id,0,pathname])
         current_dir_id += 1
@@ -44,9 +73,10 @@ for f in os.listdir(path):
 while(len(directories) > 0): #keep going while directories haven't been processed
     new_parent_dir_id,parent_dir_id,dir=directories.pop()
     count = 0
-    for f in os.listdir(dir):
-        pathname = os.path.join(dir, f)
-        mode = os.lstat(pathname)[ST_MODE]
+
+    for f in listdir(dir):
+        pathname = path.join(dir, f)
+        mode = lstat(pathname)[ST_MODE]
         if S_ISDIR(mode):
             directories.append([current_dir_id,new_parent_dir_id,pathname])
             current_dir_id += 1
@@ -54,29 +84,30 @@ while(len(directories) > 0): #keep going while directories haven't been processe
         elif S_ISREG(mode):
             count += 1
     table.append([new_parent_dir_id,parent_dir_id,dir,count])
-
+    
 #Print out directories with a disproportionate amount of inodes.
 for i in range(len(table)):
     account_total += table[i][3]
-print('Total inodes is:', account_total)
-table = sorted(table, key=operator.itemgetter(3), reverse=True)
+print(f"Total inodes is: {account_total}")
+table = sorted(table, key=itemgetter(3), reverse=True)
 count=0
 
 if len(table) == 0:
     print('Um, no subdirectories?')
-    sys.exit(0)
-elif table[count][3]>0.05*account_total:
-    print("\n-------Directories with a large number of file/directories-------")
+    exit(0)
+elif table[count][3]>single*account_total:
+    print(f"\n-------Directories with more than {single*100:.2f}% of total calculated inodes.-------")
 
-while (count<len(table) and table[count][3]>0.05*account_total):
+while (count<len(table) and table[count][3]>single*account_total):
     S = '%2.1f%%'%(float(table[count][3])/account_total*100)
     print(table[count][2],table[count][3],S)
     count+=1
 
 if count==0:
-    print("\n------------!!No large inode using directories found!!-----------\n")
+    print("\n------------!!No large inode using directories found!!-----------")
 
-table = sorted(table, key=operator.itemgetter(1))
+
+table = sorted(table, key=itemgetter(1))
 parent_dir_id = table[len(table)-1][1]
 
 #Now taking that table utilising the directory ids to sum up inodes of suddirs to parent
@@ -98,8 +129,8 @@ for x in table:
 for i in range(len(table)):
     table[i].append(table[i][3])
 
-limit = account_total/10 #report direcories that contain more the 10% of total.
-print("\n---Locating directories holding more than 10% of total inodes----")
+limit = account_total*amassed #report direcories that contain more the 10% of total.
+print(f"\n---Locating directories holding more than {amassed*100:.2f}% of total inodes----")
 while (len(table) > 0):
     inspect = table.pop()
     static_list.pop()
@@ -125,26 +156,30 @@ while (len(table) > 0):
             parent_dir_id=table[len(table)-1][1]
 
 exception = False
-#yeah. print out the final results
-directories = sorted(directories, key=operator.itemgetter(0), reverse=True)
+
+#yay. print out the final results
+directories = sorted(directories, key=itemgetter(0), reverse=True)
 if len(directories)==0:
-    print("Wow!! I didn't find anything to report. Must be a lot of folders here")
+    print("Wow!! I didn't find anything to report. Try lowering amassed argument")
 
 while (len(directories) > 0):
     item = directories.pop()
     if item[1] == item[2]:
-        print(item[0],item[1])
+        S = '%2.1f%%'%(float(item[1])/account_total*100)
+        print(item[0],item[1],S)
     else:
         exception = True
-        print(item[0],item[1],item[2])
-
+        S = '%2.1f%%'%(float(item[1])/account_total*100)
+        T = '%2.1f%%'%(float(item[2])/account_total*100)
+        print(f"{item[0]} ({item[1]} {S}) ({item[2]} {T})")
+        
 if (exception):
-    print('\nNOTE: The above lines with two numbers are excluding and including the already reported subdirs inode count')
+    print('\nNOTE: The above lines with two (value %) are excluding and including the already reported subdirs inode count')
 
-tl = sorted(tl, key=operator.itemgetter(1))
+tl = sorted(tl, key=itemgetter(1))
 count = 0
 print("\n-----Largest inode usage directories at the script's target-----")
-while (len(tl) > 0 and count < 20):
+while (len(tl) > 0 and count < 10):
     item = tl.pop()
     print(item[0],item[1])
     count += 1

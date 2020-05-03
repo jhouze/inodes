@@ -1,33 +1,47 @@
-#!/usr/bin/python2
+#!/usr/bin/env python2
 
-import os, sys, operator
-from stat import *
+from stat import S_ISDIR,ST_MODE,S_ISREG
+from os import getcwd,listdir,lstat,path
+from sys import argv,exit
+from operator import itemgetter
+from argparse import ArgumentParser
 
-if (len(sys.argv) > 2):
-    print "Inode Counter -- use this to find subfolders using excessive inodes."
-    print "If directory contains 5% or more of user's inodes, it will be shown."
-    print "If subdirectories contain 10% or more, they will be shown."
-    print "Usage: inodes.py <directory>"
-    sys.exit(1)
+usage = """Inode counter -- use this to find subfolders using excessive inodes.
+If any directory contains 5% or more of total calculated inodes, it will be shown.
+If any subdirectories contain 10% or more, they will be shown."""
+
+parser = ArgumentParser(description=usage)
+parser.add_argument("-p", "--path", dest='target', help='Path to start the search')
+target = parser.parse_args().target
+
+if not target:#target is optional, if not given setting target to current working directory
+    target=getcwd()
+
+if path.isfile(target):
+    print target + " is a file not a directory"
+    exit(2)
+
+
+try: 
+    listdir(target)
+except OSError:
+    print "Could not open " + target
+    exit(2)
+
 
 directories = []
 table = []
 tl = []
 current_dir_id = 1
 parent_dir_id = 0
-#limit = int(sys.argv[2])
 total=0
 account_total=0
 
+    
+for f in listdir(target):
+    pathname = path.join(target, f)
+    mode = lstat(pathname)[ST_MODE]
 
-#indentify directories at given level.
-path=os.getcwd()
-if (len(sys.argv) == 2):
-    path=sys.argv[1]
-
-for f in os.listdir(path):
-    pathname = os.path.join(path, f)
-    mode = os.lstat(pathname)[ST_MODE]
     if S_ISDIR(mode):
         directories.append([current_dir_id,0,pathname])
         current_dir_id += 1
@@ -44,9 +58,9 @@ for f in os.listdir(path):
 while(len(directories) > 0): #keep going while directories haven't been processed
     new_parent_dir_id,parent_dir_id,dir=directories.pop()
     count = 0
-    for f in os.listdir(dir):
-        pathname = os.path.join(dir, f)
-        mode = os.lstat(pathname)[ST_MODE]
+    for f in listdir(dir):
+        pathname = path.join(dir, f)
+        mode = lstat(pathname)[ST_MODE]
         if S_ISDIR(mode):
             directories.append([current_dir_id,new_parent_dir_id,pathname])
             current_dir_id += 1
@@ -54,17 +68,17 @@ while(len(directories) > 0): #keep going while directories haven't been processe
         elif S_ISREG(mode):
             count += 1
     table.append([new_parent_dir_id,parent_dir_id,dir,count])
-
+    
 #Print out directories with a disproportionate amount of inodes.
 for i in range(len(table)):
     account_total += table[i][3]
 print 'Total inodes is:', account_total
-table = sorted(table, key=operator.itemgetter(3), reverse=True)
+table = sorted(table, key=itemgetter(3), reverse=True)
 count=0
 
 if len(table) == 0:
     print 'Um, no subdirectories?'
-    sys.exit(0)
+    exit(0)
 elif table[count][3]>0.05*account_total:
     print "\n-------Directories with a large number of file/directories-------"
 
@@ -74,9 +88,10 @@ while (count<len(table) and table[count][3]>0.05*account_total):
     count+=1
 
 if count==0:
-    print "\n------------!!No large inode using directories found!!-----------\n"
+    print "\n------------!!No large inode using directories found!!-----------"
 
-table = sorted(table, key=operator.itemgetter(1))
+
+table = sorted(table, key=itemgetter(1))
 parent_dir_id = table[len(table)-1][1]
 
 #Now taking that table utilising the directory ids to sum up inodes of suddirs to parent
@@ -125,8 +140,9 @@ while (len(table) > 0):
             parent_dir_id=table[len(table)-1][1]
 
 exception = False
-#yeah. print out the final results
-directories = sorted(directories, key=operator.itemgetter(0), reverse=True)
+
+#yay. print out the final results
+directories = sorted(directories, key=itemgetter(0), reverse=True)
 if len(directories)==0:
     print "Wow!! I didn't find anything to report. Must be a lot of folders here"
 
@@ -141,7 +157,7 @@ while (len(directories) > 0):
 if (exception):
     print '\nNOTE: The above lines with two numbers are excluding and including the already reported subdirs inode count'
 
-tl = sorted(tl, key=operator.itemgetter(1))
+tl = sorted(tl, key=itemgetter(1))
 count = 0
 print "\n-----Largest inode usage directories at the script's target-----"
 while (len(tl) > 0 and count < 20):
