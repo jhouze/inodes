@@ -9,6 +9,10 @@ for i in `find . -mindepth 1 -maxdepth 1 -type d`; do echo -n "$i " && find $i |
 
 , cd into directory, and repeat could produce. First thing it attempts to print is any directory contains 5% or more of the total inodes below the search path. Second print any directories including sub directories which contain 10% or more will be shown. The last thing printed is basically the same thing as the for loop above.
 
+
+
+I added the single and amassed flags, migrated the target option flag to ArmgumentParser instead of sys.argv, other cleanups for python 3, since this was originally a 2.7 script.
+
 Usage help from python3.6+ version of script.
 
 ```
@@ -63,4 +67,4 @@ NOTE: The above lines with two numbers are excluding and including the already r
 /home/jhouze/test 16
 ```
 
-Without any further ado, the code with python2 and python3 syntax are over at my [github](https://github.com/jhouze/inodes). The python 2 version is less feature complete.
+The python 2 version is less feature complete.
