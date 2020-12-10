@@ -11,8 +11,6 @@ for i in `find . -mindepth 1 -maxdepth 1 -type d`; do echo -n "$i " && find $i |
 
 Usage help from python3.6+ version of script.
 
-Usage help from python3.6+ version of script.
-
 ```
 usage: inodes3.py [-h] [-p TARGET] [-s SINGLE] [-a AMASSED]
 
